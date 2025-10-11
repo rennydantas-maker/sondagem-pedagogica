@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Sondagem Pedagógica com IA</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+        
+        .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        h2 {
+            color: #667eea;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+            margin: 25px 0 15px 0;
+            font-size: 1.4rem;
+        }
+        
+        .form-section {
+            margin-bottom: 30px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #555;
+            font-size: 0.95rem;
+        }
+        
+        input[type="text"], input[type="date"], select, textarea {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1rem;
+            width: 100%;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 14px 28px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4);
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(17, 153, 142, 0.6);
+        }
+        
+        .image-upload-area {
+            margin-top: 15px;
+            border: 3px dashed #ccc;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            background-color: #f8f9fa;
+            transition: all 0.3s;
+        }
+        
+        .image-upload-area:hover {
+            border-color: #667eea;
+            background-color: #f0f4ff;
+        }
+        
+        #image-preview {
+            max-width: 100%;
+            max-height: 400px;
+            display: none;
+            margin: 15px auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        #preview-text {
+            color: #888;
+            font-size: 1.1rem;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .result-box {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-left: 5px solid #667eea;
+        }
+        
+        .result-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .result-box p {
+            margin: 8px 0;
+        }
+        
+        .result-box strong {
+            color: #333;
+        }
+        
+        .hypothesis-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin: 10px 0;
+        }
+        
+        #report-section {
+            display: none;
+            margin-top: 40px;
+            padding: 30px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            background-color: #fff;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+                background: #fff;
+            }
+            .container {
+                box-shadow: none;
+                padding: 0;
+            }
+            .form-section, .btn, .result-box, .header .badge {
+                display: none !important;
+            }
+            #report-section {
+                display: block !important;
+                border: none;
+                margin: 0;
+                padding: 0;
+            }
+            .header {
+                border-bottom: 2px solid #333;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>🎓 Sistema de Sondagem Pedagógica</h1>
+            <p>Ferramenta com Inteligência Artificial para análise de hipóteses de escrita</p>
+            <span class="badge">✨ Powered by IA</span>
+        </div>
+
+        <div class="form-section">
+            <h2>📋 1. Dados de Identificação</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="student-name">Nome do Aluno(a) *</label>
+                    <input type="text" id="student-name" placeholder="Nome completo do aluno" required>
+                </div>
+                <div class="form-group">
+                    <label for="student-grade">Série/Ano *</label>
+                    <input type="text" id="student-grade" placeholder="Ex: 1º Ano B" required>
+                </div>
+                <div class="form-group">
+                    <label for="student-dob">Data de Nascimento</label>
+                    <input type="date" id="student-dob">
+                </div>
+                <div class="form-group">
+                    <label for="teacher-name">Nome do Professor(a) *</label>
+                    <input type="text" id="teacher-name" placeholder="Seu nome completo" required>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2>✍️ 2. Análise da Sondagem</h2>
+            <div class="form-group">
+                <label for="dictated-words">Palavras Ditadas *</label>
+                <textarea id="dictated-words" placeholder="Digite as palavras ditadas, separadas por vírgula ou quebra de linha.&#10;Exemplo: BOLA, CAVALO, PÉ, FORMIGA" required></textarea>
+                <small style="color: #666; margin-top: 5px; display: block;">💡 Dica: Para melhor análise, dite palavras de diferentes tamanhos (monossílaba, dissílaba, trissílaba, polissílaba)</small>
+            </div>
+            
+            <div class="form-group">
+                <label>Imagem da Escrita *</label>
+                <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                <button class="btn btn-primary" onclick="document.getElementById('image-upload').click();" type="button">
+                    📸 Enviar Foto da Escrita
+                </button>
+                <div class="image-upload-area">
+                    <span id="preview-text">A imagem enviada aparecerá aqui</span>
+                    <img id="image-preview" src="" alt="Pré-visualização da escrita">
+                </div>
+            </div>
+
+            <button class="btn btn-primary" id="analyze-btn" onclick="analyzeWithAI()" style="width: 100%; margin-top: 20px;" disabled>
+                🤖 Analisar com Inteligência Artificial
+            </button>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processando imagem e analisando escrita...</p>
+            </div>
+            
+            <div class="result-box" id="result-box">
+                <h3>📊 Resultado da Análise Automática</h3>
+                <p><strong>Texto Identificado:</strong> <span id="result-transcription"></span></p>
+                <p><strong>Hipótese de Escrita:</strong></p>
+                <span class="hypothesis-badge" id="result-hypothesis"></span>
+                <p style="margin-top: 15px;"><strong>Justificativa Pedagógica:</strong></p>
+                <p id="result-justification" style="font-style: italic; color: #555;"></p>
+            </div>
+
+            <div class="form-grid" style="margin-top: 20px;">
+                <div class="form-group">
+                    <label for="writing-transcription">Transcrição da Escrita (Editável)</label>
+                    <input type="text" id="writing-transcription" placeholder="Será preenchido automaticamente pela IA">
+                </div>
+                <div class="form-group">
+                    <label for="writing-hypothesis">Hipótese de Escrita (Editável)</label>
+                    <select id="writing-hypothesis">
+                        <option value="" disabled selected>Será preenchido automaticamente pela IA</option>
+                        <option value="Pré-Silábico">Pré-Silábico</option>
+                        <option value="Silábico sem valor sonoro">Silábico sem valor sonoro</option>
+                        <option value="Silábico com valor sonoro">Silábico com valor sonoro</option>
+                        <option value="Silábico-Alfabético">Silábico-Alfabético</option>
+                        <option value="Alfabético">Alfabético</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="teacher-notes">Observações do Professor</label>
+                <textarea id="teacher-notes" placeholder="Anote aqui outras observações importantes sobre a sondagem."></textarea>
+            </div>
+        </div>
+
+        <button class="btn btn-success" onclick="generateReport()" style="width: 100%; font-size: 1.1rem;">
+            📄 Gerar Relatório Final
+        </button>
+
+        <div id="report-section">
+            <div class="header">
+                <h1>Relatório de Sondagem Pedagógica</h1>
+            </div>
+            <p><strong>Aluno(a):</strong> <span id="report-student-name"></span></p>
+            <p><strong>Série/Ano:</strong> <span id="report-student-grade"></span></p>
+            <p><strong>Data de Nascimento:</strong> <span id="report-student-dob"></span></p>
+            <p><strong>Professor(a):</strong> <span id="report-teacher-name"></span></p>
+            <p><strong>Data da Sondagem:</strong> <span id="report-date"></span></p>
+            <hr style="margin: 20px 0;">
+            <p><strong>Ditado Realizado:</strong></p>
+            <p style="white-space: pre-wrap; background: #f5f5f5; padding: 10px; border-radius: 5px;" id="report-dictated-words"></p>
+            <p><strong>Registro da Escrita do Aluno(a):</strong></p>
+            <img id="report-image" src="" alt="Escrita do aluno" style="max-width: 100%; border: 2px solid #ccc; margin: 10px 0; border-radius: 5px;">
+            <hr style="margin: 20px 0;">
+            <p><strong>Análise Pedagógica:</strong></p>
+            <p><strong>Hipótese de Escrita:</strong> <span id="report-writing-hypothesis" style="font-weight: bold; color: #667eea; font-size: 1.2rem;"></span></p>
+            <p><strong>Transcrição:</strong> <span id="report-writing-transcription"></span></p>
+            <p><strong>Observações do Professor:</strong></p>
+            <p style="white-space: pre-wrap; background: #f5f5f5; padding: 10px; border-radius: 5px;" id="report-teacher-notes"></p>
+        </div>
+    </div>
+
+    <script>
+        let currentImageFile = null;
+        
+        const imageUpload = document.getElementById('image-upload');
+        const imagePreview = document.getElementById('image-preview');
+        const previewText = document.getElementById('preview-text');
+        const analyzeBtn = document.getElementById('analyze-btn');
+
+        // Gerenciamento do upload de imagem
+        imageUpload.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                currentImageFile = file;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                    previewText.style.display = 'none';
+                    analyzeBtn.disabled = false;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Função principal de análise com IA
+        async function analyzeWithAI() {
+            // Validação
+            const palavrasDitadas = document.getElementById('dictated-words').value.trim();
+            
+            if (!palavrasDitadas) {
+                alert('Por favor, preencha as palavras ditadas antes de analisar.');
+                return;
+            }
+            
+            if (!currentImageFile) {
+                alert('Por favor, envie uma imagem antes de analisar.');
+                return;
+            }
+
+            // Mostra loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result-box').style.display = 'none';
+            analyzeBtn.disabled = true;
+
+            // Prepara os dados para envio
+            const formData = new FormData();
+            formData.append('file', currentImageFile);
+            formData.append('palavras_ditadas', palavrasDitadas);
+
+            try {
+                // Envia para o servidor
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Preenche os campos com os resultados da IA
+                    document.getElementById('writing-transcription').value = data.transcricao || '';
+                    document.getElementById('writing-hypothesis').value = data.hipotese || '';
+                    
+                    // Mostra o resultado
+                    document.getElementById('result-transcription').textContent = data.transcricao || 'Não identificado';
+                    document.getElementById('result-hypothesis').textContent = data.hipotese || 'Não classificado';
+                    document.getElementById('result-justification').textContent = data.justificativa || '';
+                    
+                    document.getElementById('result-box').style.display = 'block';
+                } else {
+                    alert('Erro ao analisar: ' + (data.error || 'Erro desconhecido'));
+                }
+            } catch (error) {
+                alert('Erro ao conectar com o servidor: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        // Função de geração de relatório
+        function generateReport() {
+            // Coleta de dados
+            const studentName = document.getElementById('student-name').value;
+            const studentGrade = document.getElementById('student-grade').value;
+            const studentDob = document.getElementById('student-dob').value;
+            const teacherName = document.getElementById('teacher-name').value;
+            const dictatedWords = document.getElementById('dictated-words').value;
+            const writingTranscription = document.getElementById('writing-transcription').value;
+            const writingHypothesis = document.getElementById('writing-hypothesis').value;
+            const teacherNotes = document.getElementById('teacher-notes').value;
+            const imageSrc = document.getElementById('image-preview').src;
+
+            if (!studentName || !studentGrade || !teacherName || !writingHypothesis || !imageSrc.startsWith('data:image')) {
+                alert('Por favor, preencha todos os campos obrigatórios (Nome, Série, Professor, Hipótese) e envie uma imagem antes de gerar o relatório.');
+                return;
+            }
+
+            // Preenchimento do relatório
+            document.getElementById('report-student-name').textContent = studentName;
+            document.getElementById('report-student-grade').textContent = studentGrade;
+            document.getElementById('report-student-dob').textContent = studentDob ? new Date(studentDob + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não informado';
+            document.getElementById('report-teacher-name').textContent = teacherName;
+            document.getElementById('report-date').textContent = new Date().toLocaleDateString('pt-BR');
+            document.getElementById('report-dictated-words').textContent = dictatedWords || 'Não informado';
+            document.getElementById('report-image').src = imageSrc;
+            document.getElementById('report-writing-hypothesis').textContent = writingHypothesis;
+            document.getElementById('report-writing-transcription').textContent = writingTranscription || 'N/A';
+            document.getElementById('report-teacher-notes').textContent = teacherNotes || 'Nenhuma observação adicional.';
+
+            // Exibição do relatório
+            document.getElementById('report-section').style.display = 'block';
+            
+            // Rolar para o relatório
+            setTimeout(() => {
+                document.getElementById('report-section').scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
+    </script>
+
+</body>
+</html>
+

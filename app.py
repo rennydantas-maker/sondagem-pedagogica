@@ -27,8 +27,8 @@ def analyze_image():
     Rota que recebe a imagem, processa com OCR e analisa com IA.
     
     Fluxo:
-    1. Recebe a imagem e a(s) palavra(s) ditada(s)
-    2. Usa OCR para extrair o texto da imagem
+    1. Recebe a imagem, palavra(s) ditada(s), frase e transcrição prévia
+    2. Usa OCR para extrair o texto da imagem (ou usa a transcrição prévia)
     3. Usa IA para classificar a hipótese de escrita
     4. Retorna a transcrição, hipótese e justificativa
     """
@@ -36,71 +36,104 @@ def analyze_image():
     # Validação dos dados recebidos
     if 'file' not in request.files:
         return jsonify({'error': 'Nenhum arquivo enviado'}), 400
-    
-    if 'palavras_ditadas' not in request.form:
-        return jsonify({'error': 'Palavras ditadas não foram informadas'}), 400
 
     file = request.files['file']
-    palavras_ditadas_texto = request.form['palavras_ditadas']
+    palavras_ditadas_texto = request.form.get('palavras_ditadas', '').strip()
+    frase_ditada = request.form.get('frase', '').strip()
+    transcricao_previa = request.form.get('transcricao_previa', '').strip()
     
     if file.filename == '':
         return jsonify({'error': 'Nenhum arquivo selecionado'}), 400
 
     try:
-        # ===== SIMULAÇÃO DE OCR =====
+        # ===== PRIORIDADE: TRANSCRIÇÃO PRÉVIA =====
+        # Se o professor forneceu uma transcrição prévia, usa ela ao invés do OCR
+        if transcricao_previa:
+            texto_extraido = transcricao_previa
+        else:
+            # ===== SIMULAÇÃO DE OCR =====
+            # Processa as palavras ditadas
+            palavras_lista = [p.strip() for p in palavras_ditadas_texto.replace('\n', ',').split(',') if p.strip()]
+            
+            # MODO DE DEMONSTRAÇÃO: Simula escrita para as palavras
+            if len(palavras_lista) == 1:
+                palavra = palavras_lista[0].upper()
+                
+                # Simula diferentes tipos de escrita baseado na palavra
+                if palavra == "CAVALO":
+                    texto_extraido = "CVLO"
+                elif palavra == "BOLA":
+                    texto_extraido = "BOA"
+                elif palavra == "PÉ":
+                    texto_extraido = "PE"
+                elif palavra == "FORMIGA":
+                    texto_extraido = "FRMGA"
+                else:
+                    # Para outras palavras, simula escrita alfabética com variação
+                    texto_extraido = palavra
+            
+            elif len(palavras_lista) > 1:
+                # Para múltiplas palavras, simula escritas variadas
+                escritas_simuladas = []
+                for palavra in palavras_lista:
+                    palavra_upper = palavra.upper()
+                    # Remove vogais aleatoriamente para simular escrita silábico-alfabética
+                    if len(palavra_upper) > 3:
+                        escrita_sim = ''.join([c for i, c in enumerate(palavra_upper) if i % 2 == 0 or c in 'AEIOU'])
+                    else:
+                        escrita_sim = palavra_upper
+                    escritas_simuladas.append(escrita_sim)
+                
+                texto_extraido = ', '.join(escritas_simuladas)
+            else:
+                texto_extraido = ""
+        
+        # ===== ANÁLISE COM IA =====
         # Processa as palavras ditadas
         palavras_lista = [p.strip() for p in palavras_ditadas_texto.replace('\n', ',').split(',') if p.strip()]
         
-        if len(palavras_lista) == 0:
-            return jsonify({'error': 'Nenhuma palavra ditada foi informada'}), 400
+        # Processa as escritas extraídas (do OCR ou da transcrição prévia)
+        escritas_lista = [e.strip() for e in texto_extraido.replace('\n', ',').split(',') if e.strip()]
         
-        # MODO DE DEMONSTRAÇÃO: Simula escrita para as palavras
-        if len(palavras_lista) == 1:
-            palavra = palavras_lista[0].upper()
-            
-            # Simula diferentes tipos de escrita baseado na palavra
-            if palavra == "CAVALO":
-                texto_simulado = "CVLO"
-            elif palavra == "BOLA":
-                texto_simulado = "BOA"
-            elif palavra == "PÉ":
-                texto_simulado = "PE"
-            elif palavra == "FORMIGA":
-                texto_simulado = "FRMGA"
-            else:
-                # Para outras palavras, simula escrita alfabética com variação
-                texto_simulado = palavra
-            
-            resultado_ia = analisar_escrita(palavra, texto_simulado)
+        if len(palavras_lista) == 0 and not frase_ditada:
+            return jsonify({'error': 'Nenhuma palavra ou frase ditada foi informada'}), 400
+        
+        # Se houver apenas uma palavra
+        if len(palavras_lista) == 1 and len(escritas_lista) == 1:
+            resultado_ia = analisar_escrita(palavras_lista[0], escritas_lista[0])
             
             return jsonify({
-                'transcricao': texto_simulado,
+                'transcricao': escritas_lista[0],
                 'hipotese': resultado_ia['hipotese'],
                 'justificativa': resultado_ia['justificativa'],
-                'modo': 'simulacao_producao'
+                'modo': 'transcricao_previa' if transcricao_previa else 'simulacao_producao'
             })
         
-        else:
-            # Para múltiplas palavras, simula escritas variadas
-            escritas_simuladas = []
-            for palavra in palavras_lista:
-                palavra_upper = palavra.upper()
-                # Remove vogais aleatoriamente para simular escrita silábico-alfabética
-                if len(palavra_upper) > 3:
-                    escrita_sim = ''.join([c for i, c in enumerate(palavra_upper) if i % 2 == 0 or c in 'AEIOU'])
-                else:
-                    escrita_sim = palavra_upper
-                escritas_simuladas.append(escrita_sim)
-            
-            resultado_ia = analisar_multiplas_palavras(palavras_lista, escritas_simuladas)
+        # Se houver múltiplas palavras
+        elif len(palavras_lista) > 1:
+            resultado_ia = analisar_multiplas_palavras(palavras_lista, escritas_lista)
             
             return jsonify({
-                'transcricao': ' '.join(escritas_simuladas),
+                'transcricao': ', '.join(escritas_lista),
                 'hipotese': resultado_ia['hipotese'],
                 'justificativa': resultado_ia['justificativa'],
                 'analises_individuais': resultado_ia.get('analises_individuais', []),
-                'modo': 'simulacao_producao_multiplas'
+                'modo': 'transcricao_previa' if transcricao_previa else 'simulacao_producao_multiplas'
             })
+        
+        # Se houver apenas frase
+        elif frase_ditada and texto_extraido:
+            resultado_ia = analisar_escrita(frase_ditada, texto_extraido)
+            
+            return jsonify({
+                'transcricao': texto_extraido,
+                'hipotese': resultado_ia['hipotese'],
+                'justificativa': resultado_ia['justificativa'],
+                'modo': 'transcricao_previa_frase' if transcricao_previa else 'simulacao_producao_frase'
+            })
+        
+        else:
+            return jsonify({'error': 'Não foi possível processar a análise. Verifique os dados enviados.'}), 400
 
     except Exception as e:
         return jsonify({

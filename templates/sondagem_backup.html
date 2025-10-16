@@ -104,7 +104,7 @@
         
         textarea {
             resize: vertical;
-            min-height: 60px;
+            min-height: 80px;
             font-family: inherit;
         }
         
@@ -242,20 +242,6 @@
             background-color: #fff;
         }
         
-        .alert-info {
-            background-color: #e7f3ff;
-            border-left: 4px solid #2196F3;
-            padding: 12px 15px;
-            margin: 15px 0;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            color: #0c5460;
-        }
-        
-        .alert-info strong {
-            color: #004085;
-        }
-        
         @media print {
             body {
                 padding: 0;
@@ -325,46 +311,10 @@
 
         <div class="form-section">
             <h2>✍️ 2. Análise da Sondagem</h2>
-            
-            <div class="alert-info">
-                <strong>💡 Importante:</strong> Para uma análise pedagógica completa, certifique-se de que todas as palavras e a frase estejam dentro do <strong>mesmo campo semântico</strong> (ex: animais, frutas, brinquedos, etc.).
-            </div>
-            
-            <h3 style="color: #555; font-size: 1.1rem; margin: 20px 0 10px 0;">Palavras Ditadas por Tipo Silábico</h3>
-            
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="monossilaba">Monossílaba</label>
-                    <input type="text" id="monossilaba" placeholder="Ex: PÉ, MÃO, SOL">
-                    <small style="color: #888; margin-top: 3px; display: block;">1 sílaba</small>
-                </div>
-                <div class="form-group">
-                    <label for="dissilaba">Dissílaba</label>
-                    <input type="text" id="dissilaba" placeholder="Ex: BOLA, GATO, CASA">
-                    <small style="color: #888; margin-top: 3px; display: block;">2 sílabas</small>
-                </div>
-                <div class="form-group">
-                    <label for="trissilaba">Trissílaba</label>
-                    <input type="text" id="trissilaba" placeholder="Ex: CAVALO, BANANA">
-                    <small style="color: #888; margin-top: 3px; display: block;">3 sílabas</small>
-                </div>
-                <div class="form-group">
-                    <label for="polissilaba">Polissílaba</label>
-                    <input type="text" id="polissilaba" placeholder="Ex: FORMIGA, BORBOLETA">
-                    <small style="color: #888; margin-top: 3px; display: block;">4+ sílabas</small>
-                </div>
-            </div>
-            
-            <div class="form-group" style="margin-top: 20px;">
-                <label for="frase">Frase Ditada</label>
-                <textarea id="frase" placeholder="Digite a frase ditada para o aluno escrever.&#10;Ex: O GATO BEBE LEITE"></textarea>
-                <small style="color: #888; margin-top: 5px; display: block;">💡 Lembre-se: a frase deve estar no mesmo campo semântico das palavras</small>
-            </div>
-            
-            <div class="form-group" style="margin-top: 20px;">
-                <label for="transcricao-previa">Transcrição Prévia (Opcional)</label>
-                <textarea id="transcricao-previa" placeholder="Se desejar, digite aqui como o aluno escreveu ANTES de enviar a foto. Isso ajuda a IA a fazer uma análise mais precisa.&#10;Ex: BLA, KVLO, P, FMIG"></textarea>
-                <small style="color: #888; margin-top: 5px; display: block;">💡 Esta transcrição será usada como referência pela IA, mas você poderá editá-la depois</small>
+            <div class="form-group">
+                <label for="dictated-words">Palavras Ditadas *</label>
+                <textarea id="dictated-words" placeholder="Digite as palavras ditadas, separadas por vírgula ou quebra de linha.&#10;Exemplo: BOLA, CAVALO, PÉ, FORMIGA" required></textarea>
+                <small style="color: #666; margin-top: 5px; display: block;">💡 Dica: Para melhor análise, dite palavras de diferentes tamanhos (monossílaba, dissílaba, trissílaba, polissílaba)</small>
             </div>
             
             <div class="form-group">
@@ -400,7 +350,7 @@
             <div class="form-grid" style="margin-top: 20px;">
                 <div class="form-group">
                     <label for="writing-transcription">Transcrição da Escrita (Editável)</label>
-                    <input type="text" id="writing-transcription" placeholder="Será preenchido automaticamente pela IA ou pela transcrição prévia">
+                    <input type="text" id="writing-transcription" placeholder="Será preenchido automaticamente pela IA">
                 </div>
                 <div class="form-group">
                     <label for="writing-hypothesis">Hipótese de Escrita (Editável)</label>
@@ -436,9 +386,7 @@
             <p><strong>Data da Sondagem:</strong> <span id="report-date"></span></p>
             <hr style="margin: 20px 0;">
             <p><strong>Ditado Realizado:</strong></p>
-            <div style="white-space: pre-wrap; background: #f5f5f5; padding: 10px; border-radius: 5px;">
-                <p id="report-dictated-words"></p>
-            </div>
+            <p style="white-space: pre-wrap; background: #f5f5f5; padding: 10px; border-radius: 5px;" id="report-dictated-words"></p>
             <p><strong>Registro da Escrita do Aluno(a):</strong></p>
             <img id="report-image" src="" alt="Escrita do aluno" style="max-width: 100%; border: 2px solid #ccc; margin: 10px 0; border-radius: 5px;">
             <hr style="margin: 20px 0;">
@@ -476,26 +424,11 @@
 
         // Função principal de análise com IA
         async function analyzeWithAI() {
-            // Coleta todas as palavras ditadas
-            const monossilaba = document.getElementById('monossilaba').value.trim();
-            const dissilaba = document.getElementById('dissilaba').value.trim();
-            const trissilaba = document.getElementById('trissilaba').value.trim();
-            const polissilaba = document.getElementById('polissilaba').value.trim();
-            const frase = document.getElementById('frase').value.trim();
-            const transcricaoPrevia = document.getElementById('transcricao-previa').value.trim();
-            
-            // Monta a lista de palavras ditadas
-            const palavras = [];
-            if (monossilaba) palavras.push(monossilaba);
-            if (dissilaba) palavras.push(dissilaba);
-            if (trissilaba) palavras.push(trissilaba);
-            if (polissilaba) palavras.push(polissilaba);
-            
-            const palavrasDitadas = palavras.join(', ');
-            
             // Validação
-            if (!palavrasDitadas && !frase) {
-                alert('Por favor, preencha pelo menos uma palavra ou uma frase antes de analisar.');
+            const palavrasDitadas = document.getElementById('dictated-words').value.trim();
+            
+            if (!palavrasDitadas) {
+                alert('Por favor, preencha as palavras ditadas antes de analisar.');
                 return;
             }
             
@@ -513,8 +446,6 @@
             const formData = new FormData();
             formData.append('file', currentImageFile);
             formData.append('palavras_ditadas', palavrasDitadas);
-            formData.append('frase', frase);
-            formData.append('transcricao_previa', transcricaoPrevia);
 
             try {
                 // Envia para o servidor
@@ -525,78 +456,53 @@
 
                 const data = await response.json();
 
-                // Esconde loading
-                document.getElementById('loading').style.display = 'none';
-                analyzeBtn.disabled = false;
-
-                if (data.error) {
-                    alert('Erro na análise: ' + data.error);
-                    return;
+                if (response.ok) {
+                    // Preenche os campos com os resultados da IA
+                    document.getElementById('writing-transcription').value = data.transcricao || '';
+                    document.getElementById('writing-hypothesis').value = data.hipotese || '';
+                    
+                    // Mostra o resultado
+                    document.getElementById('result-transcription').textContent = data.transcricao || 'Não identificado';
+                    document.getElementById('result-hypothesis').textContent = data.hipotese || 'Não classificado';
+                    document.getElementById('result-justification').textContent = data.justificativa || '';
+                    
+                    document.getElementById('result-box').style.display = 'block';
+                } else {
+                    alert('Erro ao analisar: ' + (data.error || 'Erro desconhecido'));
                 }
-
-                // Exibe resultados
-                document.getElementById('result-transcription').textContent = data.transcricao || 'N/A';
-                document.getElementById('result-hypothesis').textContent = data.hipotese || 'N/A';
-                document.getElementById('result-justification').textContent = data.justificativa || 'N/A';
-                document.getElementById('result-box').style.display = 'block';
-
-                // Preenche os campos editáveis
-                document.getElementById('writing-transcription').value = data.transcricao || '';
-                document.getElementById('writing-hypothesis').value = data.hipotese || '';
-
             } catch (error) {
+                alert('Erro ao conectar com o servidor: ' + error.message);
+            } finally {
                 document.getElementById('loading').style.display = 'none';
                 analyzeBtn.disabled = false;
-                alert('Erro ao processar a análise: ' + error.message);
             }
         }
 
-        // Função para gerar relatório
+        // Função de geração de relatório
         function generateReport() {
-            // Validação
-            const studentName = document.getElementById('student-name').value.trim();
-            const studentGrade = document.getElementById('student-grade').value.trim();
-            const teacherName = document.getElementById('teacher-name').value.trim();
-            const writingHypothesis = document.getElementById('writing-hypothesis').value;
-
-            if (!studentName || !studentGrade || !teacherName) {
-                alert('Por favor, preencha todos os campos obrigatórios (Nome do Aluno, Série/Ano e Nome do Professor).');
-                return;
-            }
-
-            if (!writingHypothesis) {
-                alert('Por favor, selecione a hipótese de escrita antes de gerar o relatório.');
-                return;
-            }
-
-            // Coleta dados
+            // Coleta de dados
+            const studentName = document.getElementById('student-name').value;
+            const studentGrade = document.getElementById('student-grade').value;
             const studentDob = document.getElementById('student-dob').value;
-            
-            // Monta palavras ditadas para o relatório
-            const monossilaba = document.getElementById('monossilaba').value.trim();
-            const dissilaba = document.getElementById('dissilaba').value.trim();
-            const trissilaba = document.getElementById('trissilaba').value.trim();
-            const polissilaba = document.getElementById('polissilaba').value.trim();
-            const frase = document.getElementById('frase').value.trim();
-            
-            let dictatedWordsReport = '';
-            if (monossilaba) dictatedWordsReport += 'Monossílaba: ' + monossilaba + '\n';
-            if (dissilaba) dictatedWordsReport += 'Dissílaba: ' + dissilaba + '\n';
-            if (trissilaba) dictatedWordsReport += 'Trissílaba: ' + trissilaba + '\n';
-            if (polissilaba) dictatedWordsReport += 'Polissílaba: ' + polissilaba + '\n';
-            if (frase) dictatedWordsReport += 'Frase: ' + frase;
-            
-            const writingTranscription = document.getElementById('writing-transcription').value.trim();
-            const teacherNotes = document.getElementById('teacher-notes').value.trim();
+            const teacherName = document.getElementById('teacher-name').value;
+            const dictatedWords = document.getElementById('dictated-words').value;
+            const writingTranscription = document.getElementById('writing-transcription').value;
+            const writingHypothesis = document.getElementById('writing-hypothesis').value;
+            const teacherNotes = document.getElementById('teacher-notes').value;
             const imageSrc = document.getElementById('image-preview').src;
 
-            // Preenche o relatório
+            if (!studentName || !studentGrade || !teacherName || !writingHypothesis || !imageSrc.startsWith('data:image')) {
+                alert('Por favor, preencha todos os campos obrigatórios (Nome, Série, Professor, Hipótese) e envie uma imagem antes de gerar o relatório.');
+                return;
+            }
+
+            // Preenchimento do relatório
             document.getElementById('report-student-name').textContent = studentName;
             document.getElementById('report-student-grade').textContent = studentGrade;
             document.getElementById('report-student-dob').textContent = studentDob ? new Date(studentDob + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não informado';
             document.getElementById('report-teacher-name').textContent = teacherName;
             document.getElementById('report-date').textContent = new Date().toLocaleDateString('pt-BR');
-            document.getElementById('report-dictated-words').innerHTML = dictatedWordsReport.replace(/\n/g, '<br>') || 'Não informado';
+            document.getElementById('report-dictated-words').textContent = dictatedWords || 'Não informado';
             document.getElementById('report-image').src = imageSrc;
             document.getElementById('report-writing-hypothesis').textContent = writingHypothesis;
             document.getElementById('report-writing-transcription').textContent = writingTranscription || 'N/A';

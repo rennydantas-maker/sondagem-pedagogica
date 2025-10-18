@@ -512,7 +512,10 @@
             // Prepara os dados para envio
             const formData = new FormData();
             formData.append('file', currentImageFile);
-            formData.append('palavras_ditadas', palavrasDitadas);
+            formData.append('monossilaba', monossilaba);
+            formData.append('dissilaba', dissilaba);
+            formData.append('trissilaba', trissilaba);
+            formData.append('polissilaba', polissilaba);
             formData.append('frase', frase);
             formData.append('transcricao_previa', transcricaoPrevia);
 

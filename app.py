@@ -47,6 +47,15 @@ def analyze_image():
     frase_ditada = request.form.get('frase', '').strip()
     transcricao_previa = request.form.get('transcricao_previa', '').strip()
     
+    # Log dos dados recebidos (para debugging)
+    print(f"[DEBUG] Dados recebidos:")
+    print(f"  Monossílaba: '{monossilaba}'")
+    print(f"  Dissílaba: '{dissilaba}'")
+    print(f"  Trissílaba: '{trissilaba}'")
+    print(f"  Polissílaba: '{polissilaba}'")
+    print(f"  Frase: '{frase_ditada}'")
+    print(f"  Transcrição prévia: '{transcricao_previa}'")
+    
     if file.filename == '':
         return jsonify({'error': 'Nenhum arquivo selecionado'}), 400
 
@@ -54,6 +63,7 @@ def analyze_image():
         # ===== PROCESSA AS PALAVRAS DITADAS =====
         # Junta todas as palavras dos 4 campos
         palavras_lista = []
+        print(f"[DEBUG] Processando palavras...")
         
         if monossilaba:
             palavras_lista.extend([p.strip() for p in monossilaba.replace('\n', ',').split(',') if p.strip()])
@@ -112,7 +122,12 @@ def analyze_image():
         escritas_lista = [e.strip() for e in texto_extraido.replace('\n', ',').split(',') if e.strip()]
         
         if len(palavras_lista) == 0 and not frase_ditada:
+            print(f"[DEBUG] Erro: Nenhuma palavra ou frase informada")
             return jsonify({'error': 'Nenhuma palavra ou frase ditada foi informada'}), 400
+        
+        print(f"[DEBUG] Total de palavras: {len(palavras_lista)}")
+        print(f"[DEBUG] Palavras: {palavras_lista}")
+        print(f"[DEBUG] Escritas: {escritas_lista}")
         
         # Se houver apenas uma palavra
         if len(palavras_lista) == 1 and len(escritas_lista) == 1:
@@ -152,6 +167,10 @@ def analyze_image():
             return jsonify({'error': 'Não foi possível processar a análise. Verifique os dados enviados.'}), 400
 
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"[ERROR] Erro ao processar análise:")
+        print(error_details)
         return jsonify({
             'error': f'Ocorreu um erro ao processar: {str(e)}'
         }), 500

@@ -26,8 +26,8 @@ def analyze_image():
     """
     Rota que recebe a imagem, processa com OCR e analisa com IA.
     
-    Fluxo:
-    1. Recebe a imagem, palavras ditadas (separadas por tipo silábico), frase e transcrição prévia
+    Fluxo SIMPLIFICADO:
+    1. Recebe a imagem, palavras ditadas (em um único campo) e transcrição prévia
     2. Usa OCR para extrair o texto da imagem (ou usa a transcrição prévia)
     3. Usa IA para classificar a hipótese de escrita
     4. Retorna a transcrição, hipótese e justificativa
@@ -39,21 +39,13 @@ def analyze_image():
 
     file = request.files['file']
     
-    # Recebe os campos separados de palavras ditadas
-    monossilaba = request.form.get('monossilaba', '').strip()
-    dissilaba = request.form.get('dissilaba', '').strip()
-    trissilaba = request.form.get('trissilaba', '').strip()
-    polissilaba = request.form.get('polissilaba', '').strip()
-    frase_ditada = request.form.get('frase', '').strip()
+    # Recebe os campos simplificados
+    palavras_ditadas = request.form.get('palavras_ditadas', '').strip()
     transcricao_previa = request.form.get('transcricao_previa', '').strip()
     
     # Log dos dados recebidos (para debugging)
     print(f"[DEBUG] Dados recebidos:")
-    print(f"  Monossílaba: '{monossilaba}'")
-    print(f"  Dissílaba: '{dissilaba}'")
-    print(f"  Trissílaba: '{trissilaba}'")
-    print(f"  Polissílaba: '{polissilaba}'")
-    print(f"  Frase: '{frase_ditada}'")
+    print(f"  Palavras ditadas: '{palavras_ditadas}'")
     print(f"  Transcrição prévia: '{transcricao_previa}'")
     
     if file.filename == '':
@@ -61,26 +53,29 @@ def analyze_image():
 
     try:
         # ===== PROCESSA AS PALAVRAS DITADAS =====
-        # Junta todas as palavras dos 4 campos
+        # Separa as palavras por vírgula ou quebra de linha
         palavras_lista = []
-        print(f"[DEBUG] Processando palavras...")
+        if palavras_ditadas:
+            # Substitui quebras de linha por vírgulas e depois separa
+            palavras_texto = palavras_ditadas.replace('\n', ',')
+            palavras_lista = [p.strip() for p in palavras_texto.split(',') if p.strip()]
         
-        if monossilaba:
-            palavras_lista.extend([p.strip() for p in monossilaba.replace('\n', ',').split(',') if p.strip()])
-        if dissilaba:
-            palavras_lista.extend([p.strip() for p in dissilaba.replace('\n', ',').split(',') if p.strip()])
-        if trissilaba:
-            palavras_lista.extend([p.strip() for p in trissilaba.replace('\n', ',').split(',') if p.strip()])
-        if polissilaba:
-            palavras_lista.extend([p.strip() for p in polissilaba.replace('\n', ',').split(',') if p.strip()])
+        print(f"[DEBUG] Total de palavras ditadas: {len(palavras_lista)}")
+        print(f"[DEBUG] Palavras: {palavras_lista}")
+        
+        if len(palavras_lista) == 0:
+            return jsonify({'error': 'Nenhuma palavra ou frase ditada foi informada'}), 400
         
         # ===== PRIORIDADE: TRANSCRIÇÃO PRÉVIA =====
         # Se o professor forneceu uma transcrição prévia, usa ela ao invés do OCR
         if transcricao_previa:
             texto_extraido = transcricao_previa
+            print(f"[DEBUG] Usando transcrição prévia: '{texto_extraido}'")
         else:
             # ===== SIMULAÇÃO DE OCR =====
             # MODO DE DEMONSTRAÇÃO: Simula escrita para as palavras
+            print(f"[DEBUG] Simulando OCR para {len(palavras_lista)} palavra(s)...")
+            
             if len(palavras_lista) == 1:
                 palavra = palavras_lista[0].upper()
                 
@@ -89,7 +84,7 @@ def analyze_image():
                     texto_extraido = "CVLO"
                 elif palavra == "BOLA":
                     texto_extraido = "BOA"
-                elif palavra == "PÉ":
+                elif palavra == "PÉ" or palavra == "PE":
                     texto_extraido = "PE"
                 elif palavra == "FORMIGA":
                     texto_extraido = "FRMGA"
@@ -97,7 +92,7 @@ def analyze_image():
                     # Para outras palavras, simula escrita alfabética com variação
                     texto_extraido = palavra
             
-            elif len(palavras_lista) > 1:
+            else:
                 # Para múltiplas palavras, simula escritas variadas
                 escritas_simuladas = []
                 for palavra in palavras_lista:
@@ -111,37 +106,38 @@ def analyze_image():
                 
                 texto_extraido = ', '.join(escritas_simuladas)
             
-            elif frase_ditada:
-                # Se só tem frase, simula escrita da frase
-                texto_extraido = frase_ditada.upper()
-            else:
-                texto_extraido = ""
+            print(f"[DEBUG] Texto simulado: '{texto_extraido}'")
         
         # ===== ANÁLISE COM IA =====
         # Processa as escritas extraídas (do OCR ou da transcrição prévia)
-        escritas_lista = [e.strip() for e in texto_extraido.replace('\n', ',').split(',') if e.strip()]
+        escritas_lista = []
+        if texto_extraido:
+            # Substitui quebras de linha por vírgulas e depois separa
+            escritas_texto = texto_extraido.replace('\n', ',')
+            escritas_lista = [e.strip() for e in escritas_texto.split(',') if e.strip()]
         
-        if len(palavras_lista) == 0 and not frase_ditada:
-            print(f"[DEBUG] Erro: Nenhuma palavra ou frase informada")
-            return jsonify({'error': 'Nenhuma palavra ou frase ditada foi informada'}), 400
-        
-        print(f"[DEBUG] Total de palavras: {len(palavras_lista)}")
-        print(f"[DEBUG] Palavras: {palavras_lista}")
+        print(f"[DEBUG] Total de escritas: {len(escritas_lista)}")
         print(f"[DEBUG] Escritas: {escritas_lista}")
         
-        # Se houver apenas uma palavra
+        if len(escritas_lista) == 0:
+            return jsonify({'error': 'Não foi possível extrair texto da imagem ou da transcrição'}), 400
+        
+        # ===== ANÁLISE INTELIGENTE =====
+        # Se houver apenas uma palavra/escrita
         if len(palavras_lista) == 1 and len(escritas_lista) == 1:
+            print(f"[DEBUG] Analisando palavra única: '{palavras_lista[0]}' → '{escritas_lista[0]}'")
             resultado_ia = analisar_escrita(palavras_lista[0], escritas_lista[0])
             
             return jsonify({
                 'transcricao': escritas_lista[0],
                 'hipotese': resultado_ia['hipotese'],
                 'justificativa': resultado_ia['justificativa'],
-                'modo': 'transcricao_previa' if transcricao_previa else 'simulacao_producao'
+                'modo': 'transcricao_previa' if transcricao_previa else 'simulacao_ocr'
             })
         
-        # Se houver múltiplas palavras
-        elif len(palavras_lista) > 1 and len(escritas_lista) > 0:
+        # Se houver múltiplas palavras/escritas
+        else:
+            print(f"[DEBUG] Analisando múltiplas palavras...")
             resultado_ia = analisar_multiplas_palavras(palavras_lista, escritas_lista)
             
             return jsonify({
@@ -149,22 +145,8 @@ def analyze_image():
                 'hipotese': resultado_ia['hipotese'],
                 'justificativa': resultado_ia['justificativa'],
                 'analises_individuais': resultado_ia.get('analises_individuais', []),
-                'modo': 'transcricao_previa' if transcricao_previa else 'simulacao_producao_multiplas'
+                'modo': 'transcricao_previa' if transcricao_previa else 'simulacao_ocr_multiplas'
             })
-        
-        # Se houver apenas frase
-        elif frase_ditada and len(escritas_lista) == 1:
-            resultado_ia = analisar_escrita(frase_ditada, escritas_lista[0])
-            
-            return jsonify({
-                'transcricao': escritas_lista[0],
-                'hipotese': resultado_ia['hipotese'],
-                'justificativa': resultado_ia['justificativa'],
-                'modo': 'transcricao_previa_frase' if transcricao_previa else 'simulacao_producao_frase'
-            })
-        
-        else:
-            return jsonify({'error': 'Não foi possível processar a análise. Verifique os dados enviados.'}), 400
 
     except Exception as e:
         import traceback

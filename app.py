@@ -5,7 +5,7 @@ Versão de produção com OCR simulado (não requer Google Cloud)
 
 import os
 from flask import Flask, request, jsonify, render_template
-from ai_analyzer import analisar_escrita, analisar_multiplas_palavras
+from ai_analyzer import analisar_escrita, analisar_multiplas_palavras, analisar_escrita_com_imagem
 import io
 
 # Configuração do Flask
@@ -66,16 +66,51 @@ def analyze_image():
         if len(palavras_lista) == 0:
             return jsonify({'error': 'Nenhuma palavra ou frase ditada foi informada'}), 400
         
+        # ===== SALVA A IMAGEM TEMPORARIAMENTE =====
+        # Salva a imagem para o Gemini processar
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
+            file.save(tmp_file.name)
+            temp_image_path = tmp_file.name
+        
+        print(f"[DEBUG] Imagem salva em: {temp_image_path}")
+        
         # ===== PRIORIDADE: TRANSCRIÇÃO PRÉVIA =====
-        # Se o professor forneceu uma transcrição prévia, usa ela ao invés do OCR
+        # Se o professor forneceu uma transcrição prévia, usa ela ao invés do Gemini Vision
         if transcricao_previa:
             texto_extraido = transcricao_previa
             print(f"[DEBUG] Usando transcrição prévia: '{texto_extraido}'")
         else:
-            # ===== SIMULAÇÃO DE OCR =====
-            # MODO DE DEMONSTRAÇÃO: Simula escrita para as palavras
-            print(f"[DEBUG] Simulando OCR para {len(palavras_lista)} palavra(s)...")
+            # ===== ANÁLISE COM GEMINI VISION =====
+            # Usa o Gemini para ler a imagem diretamente
+            print(f"[DEBUG] Usando Gemini Vision para analisar a imagem...")
             
+            try:
+                resultado_gemini = analisar_escrita_com_imagem(palavras_ditadas, temp_image_path)
+                texto_extraido = resultado_gemini.get('transcricao', '')
+                print(f"[DEBUG] Gemini extraiu: '{texto_extraido}'")
+                
+                # Se o Gemini retornou uma análise completa, usa ela diretamente
+                if resultado_gemini.get('hipotese') and resultado_gemini.get('hipotese') != 'Erro na Análise':
+                    # Limpa o arquivo temporário
+                    import os as os_module
+                    try:
+                        os_module.unlink(temp_image_path)
+                    except:
+                        pass
+                    
+                    return jsonify({
+                        'transcricao': resultado_gemini.get('transcricao', ''),
+                        'hipotese': resultado_gemini.get('hipotese', ''),
+                        'justificativa': resultado_gemini.get('justificativa', ''),
+                        'modo': 'gemini_vision'
+                    })
+            
+            except Exception as e:
+                print(f"[DEBUG] Erro ao usar Gemini Vision: {str(e)}")
+                print(f"[DEBUG] Voltando para simulação de OCR...")
+            
+            # Se o Gemini falhou, usa simulação de OCR como fallback
             if len(palavras_lista) == 1:
                 palavra = palavras_lista[0].upper()
                 
@@ -106,7 +141,14 @@ def analyze_image():
                 
                 texto_extraido = ', '.join(escritas_simuladas)
             
-            print(f"[DEBUG] Texto simulado: '{texto_extraido}'")
+            print(f"[DEBUG] Texto simulado (fallback): '{texto_extraido}'")
+        
+        # Limpa o arquivo temporário
+        import os as os_module
+        try:
+            os_module.unlink(temp_image_path)
+        except:
+            pass
         
         # ===== ANÁLISE COM IA =====
         # Processa as escritas extraídas (do OCR ou da transcrição prévia)

@@ -1,14 +1,18 @@
 """
 Módulo de Análise de Hipóteses de Escrita com Inteligência Artificial
-Este módulo usa um modelo de linguagem para analisar a escrita de crianças
+Este módulo usa o Google Gemini para analisar a escrita de crianças
 e classificar a hipótese de escrita segundo a psicogênese da língua escrita.
 """
 
 import os
-from openai import OpenAI
+import google.generativeai as genai
+from PIL import Image
+import json
 
-# Inicializa o cliente OpenAI (as credenciais já estão configuradas no ambiente)
-client = OpenAI()
+# Configura o Gemini com a chave da API
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
 
 # Prompt de sistema que ensina a IA sobre as hipóteses de escrita
 SYSTEM_PROMPT = """Você é um especialista em alfabetização e psicogênese da língua escrita, baseado nos estudos de Emilia Ferreiro e Ana Teberosky. Sua função é analisar a escrita de crianças em processo de alfabetização e classificá-las nas seguintes hipóteses de escrita:
@@ -59,13 +63,75 @@ Responda SEMPRE no formato JSON:
 """
 
 
+def analisar_escrita_com_imagem(palavras_ditadas: str, imagem_path: str) -> dict:
+    """
+    Analisa a escrita da criança diretamente da imagem usando Gemini Vision.
+    
+    Args:
+        palavras_ditadas: As palavras/frase que foram ditadas para a criança
+        imagem_path: Caminho para a imagem da escrita
+    
+    Returns:
+        dict: Dicionário com 'transcricao', 'hipotese' e 'justificativa'
+    """
+    
+    try:
+        # Carrega a imagem
+        img = Image.open(imagem_path)
+        
+        # Cria o modelo Gemini com visão
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # Prepara o prompt completo
+        prompt = f"""{SYSTEM_PROMPT}
+
+Analise a imagem da escrita da criança e faça o seguinte:
+
+1. **Transcreva** exatamente o que a criança escreveu na imagem
+2. **Compare** com as palavras ditadas: {palavras_ditadas}
+3. **Classifique** a hipótese de escrita
+4. **Justifique** pedagogicamente sua classificação
+
+Responda no formato JSON:
+{{
+  "transcricao": "O que você leu na imagem",
+  "hipotese": "Nome da Hipótese",
+  "justificativa": "Explicação pedagógica detalhada"
+}}
+"""
+        
+        # Envia para o Gemini
+        response = model.generate_content([prompt, img])
+        
+        # Extrai o JSON da resposta
+        response_text = response.text.strip()
+        
+        # Remove markdown code blocks se existirem
+        if response_text.startswith('```json'):
+            response_text = response_text.replace('```json', '').replace('```', '').strip()
+        elif response_text.startswith('```'):
+            response_text = response_text.replace('```', '').strip()
+        
+        resultado = json.loads(response_text)
+        
+        return resultado
+    
+    except Exception as e:
+        # Em caso de erro, retorna uma resposta padrão
+        return {
+            "transcricao": "",
+            "hipotese": "Erro na Análise",
+            "justificativa": f"Ocorreu um erro ao processar a análise com Gemini: {str(e)}"
+        }
+
+
 def analisar_escrita(palavra_ditada: str, escrita_crianca: str) -> dict:
     """
-    Analisa a escrita da criança e retorna a hipótese de escrita classificada.
+    Analisa a escrita da criança (quando já temos a transcrição).
     
     Args:
         palavra_ditada: A palavra que foi ditada para a criança
-        escrita_crianca: O que a criança escreveu (transcrito do OCR)
+        escrita_crianca: O que a criança escreveu (já transcrito)
     
     Returns:
         dict: Dicionário com 'hipotese' e 'justificativa'
@@ -78,29 +144,40 @@ def analisar_escrita(palavra_ditada: str, escrita_crianca: str) -> dict:
             "justificativa": "Não foi possível identificar escrita na imagem."
         }
     
-    # Prepara o prompt do usuário
-    user_prompt = f"""Analise a seguinte escrita:
+    try:
+        # Cria o modelo Gemini
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # Prepara o prompt
+        prompt = f"""{SYSTEM_PROMPT}
+
+Analise a seguinte escrita:
 
 Palavra ditada: {palavra_ditada.upper()}
 Escrita da criança: {escrita_crianca.upper()}
 
-Classifique a hipótese de escrita e justifique."""
+Classifique a hipótese de escrita e justifique.
 
-    try:
-        # Chama o modelo de IA
-        response = client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt}
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.3  # Baixa temperatura para respostas mais consistentes
-        )
+Responda no formato JSON:
+{{
+  "hipotese": "Nome da Hipótese",
+  "justificativa": "Explicação pedagógica"
+}}
+"""
         
-        # Extrai a resposta
-        import json
-        resultado = json.loads(response.choices[0].message.content)
+        # Envia para o Gemini
+        response = model.generate_content(prompt)
+        
+        # Extrai o JSON da resposta
+        response_text = response.text.strip()
+        
+        # Remove markdown code blocks se existirem
+        if response_text.startswith('```json'):
+            response_text = response_text.replace('```json', '').replace('```', '').strip()
+        elif response_text.startswith('```'):
+            response_text = response_text.replace('```', '').strip()
+        
+        resultado = json.loads(response_text)
         
         return resultado
     
@@ -142,30 +219,39 @@ def analisar_multiplas_palavras(palavras_ditadas: list, escritas: list) -> dict:
         })
     
     # Prepara um prompt para síntese geral
-    sintese_prompt = f"""Com base nas seguintes análises individuais, determine a hipótese de escrita GERAL da criança:
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        analises_texto = "\n".join([f"- {a['palavra']}: escreveu '{a['escrita']}' → {a['hipotese']}" for a in analises])
+        
+        sintese_prompt = f"""{SYSTEM_PROMPT}
 
-{chr(10).join([f"- {a['palavra']}: escreveu '{a['escrita']}' → {a['hipotese']}" for a in analises])}
+Com base nas seguintes análises individuais, determine a hipótese de escrita GERAL da criança:
+
+{analises_texto}
 
 Considerando que:
 - Se todas as análises apontam para a mesma hipótese, essa é a hipótese geral
 - Se há variação, escolha a hipótese que melhor representa o nível de compreensão predominante
 - Em caso de transição, prefira a hipótese mais avançada que aparece consistentemente
 
-Responda no formato JSON com a hipótese geral e justificativa."""
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": sintese_prompt}
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.3
-        )
+Responda no formato JSON com a hipótese geral e justificativa:
+{{
+  "hipotese": "Nome da Hipótese Geral",
+  "justificativa": "Explicação pedagógica da classificação geral"
+}}
+"""
         
-        import json
-        resultado_geral = json.loads(response.choices[0].message.content)
+        response = model.generate_content(sintese_prompt)
+        response_text = response.text.strip()
+        
+        # Remove markdown code blocks se existirem
+        if response_text.startswith('```json'):
+            response_text = response_text.replace('```json', '').replace('```', '').strip()
+        elif response_text.startswith('```'):
+            response_text = response_text.replace('```', '').strip()
+        
+        resultado_geral = json.loads(response_text)
         
         return {
             "hipotese": resultado_geral["hipotese"],

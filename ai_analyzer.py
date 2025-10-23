@@ -11,8 +11,18 @@ import json
 
 # Configura o Gemini com a chave da API
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+GEMINI_DISPONIVEL = False
+
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        GEMINI_DISPONIVEL = True
+        print("[INFO] Gemini configurado com sucesso")
+    except Exception as e:
+        print(f"[WARN] Erro ao configurar Gemini: {str(e)}")
+        GEMINI_DISPONIVEL = False
+else:
+    print("[WARN] GEMINI_API_KEY não configurada. Sistema usará modo de simulação.")
 
 # Prompt de sistema que ensina a IA sobre as hipóteses de escrita
 SYSTEM_PROMPT = """Você é um especialista em alfabetização e psicogênese da língua escrita, baseado nos estudos de Emilia Ferreiro e Ana Teberosky. Sua função é analisar a escrita de crianças em processo de alfabetização e classificá-las nas seguintes hipóteses de escrita:
@@ -75,6 +85,14 @@ def analisar_escrita_com_imagem(palavras_ditadas: str, imagem_path: str) -> dict
         dict: Dicionário com 'transcricao', 'hipotese' e 'justificativa'
     """
     
+    # Verifica se o Gemini está disponível
+    if not GEMINI_DISPONIVEL:
+        return {
+            "transcricao": "",
+            "hipotese": "Erro na Análise",
+            "justificativa": "Gemini não está configurado. Configure a variável GEMINI_API_KEY no Render.com."
+        }
+    
     try:
         # Carrega a imagem
         img = Image.open(imagem_path)
@@ -118,10 +136,21 @@ Responda no formato JSON:
     
     except Exception as e:
         # Em caso de erro, retorna uma resposta padrão
+        error_msg = str(e)
+        print(f"[ERROR] Erro no Gemini Vision: {error_msg}")
+        
+        # Se for erro de autenticação, retorna mensagem clara
+        if "API key" in error_msg or "authentication" in error_msg.lower():
+            return {
+                "transcricao": "",
+                "hipotese": "Erro na Análise",
+                "justificativa": "Chave API do Gemini inválida ou não configurada. Configure GEMINI_API_KEY no Render.com."
+            }
+        
         return {
             "transcricao": "",
             "hipotese": "Erro na Análise",
-            "justificativa": f"Ocorreu um erro ao processar a análise com Gemini: {str(e)}"
+            "justificativa": f"Erro ao processar com Gemini: {error_msg[:200]}"
         }
 
 
@@ -142,6 +171,13 @@ def analisar_escrita(palavra_ditada: str, escrita_crianca: str) -> dict:
         return {
             "hipotese": "Pré-Silábico",
             "justificativa": "Não foi possível identificar escrita na imagem."
+        }
+    
+    # Verifica se o Gemini está disponível
+    if not GEMINI_DISPONIVEL:
+        return {
+            "hipotese": "Erro na Análise",
+            "justificativa": "Gemini não está configurado. Configure a variável GEMINI_API_KEY."
         }
     
     try:
@@ -219,6 +255,13 @@ def analisar_multiplas_palavras(palavras_ditadas: list, escritas: list) -> dict:
         })
     
     # Prepara um prompt para síntese geral
+    if not GEMINI_DISPONIVEL:
+        return {
+            "hipotese": "Erro na Análise",
+            "justificativa": "Gemini não está configurado. Configure a variável GEMINI_API_KEY.",
+            "analises_individuais": analises
+        }
+    
     try:
         model = genai.GenerativeModel('gemini-1.5-flash')
         

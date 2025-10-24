@@ -98,7 +98,7 @@ def analisar_escrita_com_imagem(palavras_ditadas: str, imagem_path: str) -> dict
         img = Image.open(imagem_path)
         
         # Cria o modelo Gemini com visão
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         # Prepara o prompt completo
         prompt = f"""{SYSTEM_PROMPT}
@@ -182,7 +182,7 @@ def analisar_escrita(palavra_ditada: str, escrita_crianca: str) -> dict:
     
     try:
         # Cria o modelo Gemini
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         # Prepara o prompt
         prompt = f"""{SYSTEM_PROMPT}
@@ -263,7 +263,7 @@ def analisar_multiplas_palavras(palavras_ditadas: list, escritas: list) -> dict:
         }
     
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         analises_texto = "\n".join([f"- {a['palavra']}: escreveu '{a['escrita']}' → {a['hipotese']}" for a in analises])
         

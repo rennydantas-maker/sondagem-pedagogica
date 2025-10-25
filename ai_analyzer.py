@@ -124,12 +124,21 @@ Responda no formato JSON:
         # Extrai o JSON da resposta
         response_text = response.text.strip()
         
-        # Remove markdown code blocks se existirem
+        # Remove markdown code blocks se existirem e limpa o texto antes de decodificar JSON
         if response_text.startswith('```json'):
             response_text = response_text.replace('```json', '').replace('```', '').strip()
         elif response_text.startswith('```'):
             response_text = response_text.replace('```', '').strip()
-        
+            
+        # Tenta encontrar o primeiro e último { } para garantir que só o JSON seja decodificado
+        try:
+            json_start = response_text.index('{')
+            json_end = response_text.rindex('}') + 1
+            response_text = response_text[json_start:json_end]
+        except ValueError:
+            # Se não encontrar chaves, tenta decodificar o texto inteiro e lança erro se falhar
+            pass
+            
         resultado = json.loads(response_text)
         
         return resultado
@@ -207,12 +216,21 @@ Responda no formato JSON:
         # Extrai o JSON da resposta
         response_text = response.text.strip()
         
-        # Remove markdown code blocks se existirem
+        # Remove markdown code blocks se existirem e limpa o texto antes de decodificar JSON
         if response_text.startswith('```json'):
             response_text = response_text.replace('```json', '').replace('```', '').strip()
         elif response_text.startswith('```'):
             response_text = response_text.replace('```', '').strip()
-        
+            
+        # Tenta encontrar o primeiro e último { } para garantir que só o JSON seja decodificado
+        try:
+            json_start = response_text.index('{')
+            json_end = response_text.rindex('}') + 1
+            response_text = response_text[json_start:json_end]
+        except ValueError:
+            # Se não encontrar chaves, tenta decodificar o texto inteiro e lança erro se falhar
+            pass
+            
         resultado = json.loads(response_text)
         
         return resultado
@@ -288,14 +306,22 @@ Responda no formato JSON com a hipótese geral e justificativa:
         response = model.generate_content(sintese_prompt)
         response_text = response.text.strip()
         
-        # Remove markdown code blocks se existirem
+        # Remove markdown code blocks se existirem e limpa o texto antes de decodificar JSON
         if response_text.startswith('```json'):
             response_text = response_text.replace('```json', '').replace('```', '').strip()
         elif response_text.startswith('```'):
             response_text = response_text.replace('```', '').strip()
+            
+        # Tenta encontrar o primeiro e último { } para garantir que só o JSON seja decodificado
+        try:
+            json_start = response_text.index('{')
+            json_end = response_text.rindex('}') + 1
+            response_text = response_text[json_start:json_end]
+        except ValueError:
+            # Se não encontrar chaves, tenta decodificar o texto inteiro e lança erro se falhar
+            pass
         
-        resultado_geral = json.loads(response_text)
-        
+        resultado_geral = json.loads(response_text)      
         return {
             "hipotese": resultado_geral["hipotese"],
             "justificativa": resultado_geral["justificativa"],

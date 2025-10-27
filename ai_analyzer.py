@@ -329,9 +329,20 @@ Responda no formato JSON com a hipótese geral e justificativa:
         }
     
     except Exception as e:
+        error_msg = str(e)
+        print(f"[ERROR] Erro ao processar análise geral (Gemini): {error_msg}")
+        
+        # Se for erro de autenticação, retorna mensagem clara
+        if "API key" in error_msg or "authentication" in error_msg.lower():
+            justificativa = "Chave API do Gemini inválida ou não configurada. Configure GEMINI_API_KEY no Render.com."
+        elif "Invalid JSON" in error_msg:
+            justificativa = "O Gemini retornou um formato inválido. Tente novamente ou simplifique o texto."
+        else:
+            justificativa = f"Erro ao processar análise geral: {error_msg[:200]}"
+            
         return {
             "hipotese": "Erro na Análise",
-            "justificativa": f"Erro ao processar análise geral: {str(e)}",
+            "justificativa": justificativa,
             "analises_individuais": analises
         }
 

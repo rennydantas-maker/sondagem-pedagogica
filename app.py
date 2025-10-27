@@ -165,6 +165,20 @@ def analyze_image():
             return jsonify({'error': 'Não foi possível extrair texto da imagem ou da transcrição'}), 400
         
         # ===== ANÁLISE INTELIGENTE =====
+        
+        # ⚠️ VERIFICAÇÃO DE CONTROLE: Palavras Ditadas vs. Transcrição Prévia
+        if transcricao_previa and len(palavras_lista) != len(escritas_lista):
+            # Limpa o arquivo temporário
+            import os as os_module
+            try:
+                os_module.unlink(temp_image_path)
+            except:
+                pass
+                
+            return jsonify({
+                'error': f'Erro de Contagem: O número de palavras ditadas ({len(palavras_lista)}) não corresponde ao número de escritas na transcrição prévia ({len(escritas_lista)}). Verifique se usou vírgulas para separar as palavras/frases em ambos os campos.'
+            }), 400
+            
         # Se houver apenas uma palavra/escrita
         if len(palavras_lista) == 1 and len(escritas_lista) == 1:
             print(f"[DEBUG] Analisando palavra única: '{palavras_lista[0]}' → '{escritas_lista[0]}'")

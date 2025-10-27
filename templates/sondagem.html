@@ -343,11 +343,7 @@
                 <small>💡 Você pode digitar palavras separadas por vírgula ou uma frase completa. O sistema identificará automaticamente.</small>
             </div>
             
-            <div class="form-group" style="margin-top: 20px;">
-                <label for="transcricao-previa">Transcrição da Escrita do Aluno (Opcional)</label>
-                <textarea id="transcricao-previa" placeholder="Se desejar, digite aqui EXATAMENTE como o aluno escreveu (antes de enviar a foto).&#10;Separe cada palavra por vírgula, na mesma ordem das palavras ditadas.&#10;&#10;Exemplo:&#10;PE, BOA, CVLO, FMIG"></textarea>
-                <small>💡 Se você preencher este campo, a IA usará esta transcrição ao invés de tentar ler a imagem. Isso garante maior precisão na análise.</small>
-            </div>
+
             
             <div class="form-group">
                 <label>Imagem da Escrita *</label>
@@ -464,7 +460,7 @@
         async function analyzeWithAI() {
             // Coleta os dados
             const palavrasDitadas = document.getElementById('palavras-ditadas').value.trim();
-            const transcricaoPrevia = document.getElementById('transcricao-previa').value.trim();
+            const transcricaoPrevia = ''; // Removido do formulário, sempre vazio
             
             // Validação
             if (!palavrasDitadas) {
@@ -516,6 +512,12 @@
                 document.getElementById('writing-transcription').value = data.transcricao || '';
                 document.getElementById('writing-hypothesis').value = data.hipotese || '';
 
+                // O campo de transcrição editável agora é a fonte da verdade para a análise final
+                document.getElementById('writing-transcription').addEventListener('change', function() {
+                    // Se o professor corrigir a transcrição, a análise deve ser refeita
+                    reanalyzeWithAI(palavrasDitadas, this.value);
+                });
+
             } catch (error) {
                 document.getElementById('loading').style.display = 'none';
                 analyzeBtn.disabled = false;
@@ -523,6 +525,47 @@
             }
         }
 
+        // Função para refazer a análise com transcrição corrigida
+        async function reanalyzeWithAI(palavrasDitadas, transcricaoCorrigida) {
+            // Mostra loading
+            document.getElementById('loading').style.display = 'block';
+            
+            const formData = new FormData();
+            formData.append('palavras_ditadas', palavrasDitadas);
+            formData.append('transcricao_previa', transcricaoCorrigida); // Usa o campo de transcrição prévia para a análise corrigida
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                // Esconde loading
+                document.getElementById('loading').style.display = 'none';
+
+                if (data.error) {
+                    // Se der erro na reanálise, avisa
+                    alert('Erro ao refazer a análise: ' + data.error);
+                    return;
+                }
+
+                // Atualiza apenas os resultados da análise
+                document.getElementById('result-transcription').textContent = data.transcricao || 'N/A';
+                document.getElementById('result-hypothesis').textContent = data.hipotese || 'N/A';
+                document.getElementById('result-justification').textContent = data.justificativa || 'N/A';
+                document.getElementById('result-box').style.display = 'block';
+
+                // Atualiza o campo editável de hipótese
+                document.getElementById('writing-hypothesis').value = data.hipotese || '';
+                
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                alert('Erro ao processar a reanálise: ' + error.message);
+            }
+        }
+        
         // Função para gerar relatório
         function generateReport() {
             // Validação

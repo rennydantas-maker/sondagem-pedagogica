@@ -34,10 +34,15 @@ def analyze_image():
     """
     
     # Validação dos dados recebidos
-    if 'file' not in request.files:
+    # Se houver transcrição prévia, não é necessário o arquivo (modo de reanálise)
+    transcricao_previa = request.form.get('transcricao_previa', '').strip()
+    
+    if transcricao_previa:
+        file = None
+    elif 'file' not in request.files:
         return jsonify({'error': 'Nenhum arquivo enviado'}), 400
-
-    file = request.files['file']
+    else:
+        file = request.files['file']
     
     # Recebe os campos simplificados
     palavras_ditadas = request.form.get('palavras_ditadas', '').strip()
@@ -48,7 +53,7 @@ def analyze_image():
     print(f"  Palavras ditadas: '{palavras_ditadas}'")
     print(f"  Transcrição prévia: '{transcricao_previa}'")
     
-    if file.filename == '':
+    if file and file.filename == '':
         return jsonify({'error': 'Nenhum arquivo selecionado'}), 400
 
     try:
@@ -67,7 +72,9 @@ def analyze_image():
             return jsonify({'error': 'Nenhuma palavra ou frase ditada foi informada'}), 400
         
         # ===== SALVA A IMAGEM TEMPORARIAMENTE =====
-        # Salva a imagem para o Gemini processar
+    # Salva a imagem para o Gemini processar
+    temp_image_path = None
+    if file:
         import tempfile
         with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_file:
             file.save(tmp_file.name)
@@ -76,14 +83,14 @@ def analyze_image():
         print(f"[DEBUG] Imagem salva em: {temp_image_path}")
         
         # ===== PRIORIDADE: TRANSCRIÇÃO PRÉVIA =====
-        # Se o professor forneceu uma transcrição prévia, usa ela ao invés do Gemini Vision
-        if transcricao_previa:
-            texto_extraido = transcricao_previa
-            print(f"[DEBUG] Usando transcrição prévia: '{texto_extraido}'")
-        else:
-            # ===== ANÁLISE COM GEMINI VISION =====
-            # Usa o Gemini para ler a imagem diretamente
-            print(f"[DEBUG] Usando Gemini Vision para analisar a imagem...")
+    # Se o professor forneceu uma transcrição prévia, usa ela ao invés do Gemini Vision
+    if transcricao_previa:
+        texto_extraido = transcricao_previa
+        print(f"[DEBUG] Usando transcrição prévia (modo reanálise): '{texto_extraido}'")
+    elif file:
+        # ===== ANÁLISE COM GEMINI VISION =====
+        # Usa o Gemini para ler a imagem diretamente
+        print(f"[DEBUG] Usando Gemini Vision para analisar a imagem...")
             
             try:
                 resultado_gemini = analisar_escrita_com_imagem(palavras_ditadas, temp_image_path)
@@ -92,12 +99,13 @@ def analyze_image():
                 
                 # Se o Gemini retornou uma análise completa, usa ela diretamente
                 if resultado_gemini.get('hipotese') and resultado_gemini.get('hipotese') != 'Erro na Análise':
-                    # Limpa o arquivo temporário
-                    import os as os_module
-                    try:
-                        os_module.unlink(temp_image_path)
-                    except:
-                        pass
+    # Limpa o arquivo temporário
+    if temp_image_path:
+        import os as os_module
+        try:
+            os_module.unlink(temp_image_path)
+        except:
+            pass
                     
                     return jsonify({
                         'transcricao': resultado_gemini.get('transcricao', ''),
@@ -166,18 +174,19 @@ def analyze_image():
         
         # ===== ANÁLISE INTELIGENTE =====
         
-        # ⚠️ VERIFICAÇÃO DE CONTROLE: Palavras Ditadas vs. Transcrição Prévia
-        if transcricao_previa and len(palavras_lista) != len(escritas_lista):
-            # Limpa o arquivo temporário
+    # ⚠️ VERIFICAÇÃO DE CONTROLE: Palavras Ditadas vs. Transcrição Prévia
+    if transcricao_previa and len(palavras_lista) != len(escritas_lista):
+        # Limpa o arquivo temporário
+        if temp_image_path:
             import os as os_module
             try:
                 os_module.unlink(temp_image_path)
             except:
                 pass
                 
-            return jsonify({
-                'error': f'Erro de Contagem: O número de palavras ditadas ({len(palavras_lista)}) não corresponde ao número de escritas na transcrição prévia ({len(escritas_lista)}). Verifique se usou vírgulas para separar as palavras/frases em ambos os campos.'
-            }), 400
+        return jsonify({
+            'error': f'Erro de Contagem: O número de palavras ditadas ({len(palavras_lista)}) não corresponde ao número de escritas na transcrição prévia ({len(escritas_lista)}). Verifique se usou vírgulas para separar as palavras/frases em ambos os campos.'
+        }), 400
             
         # Se houver apenas uma palavra/escrita
         if len(palavras_lista) == 1 and len(escritas_lista) == 1:

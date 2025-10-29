@@ -62,13 +62,12 @@ SYSTEM_PROMPT = """Você é um especialista em alfabetização e psicogênese da
 Quando receber uma palavra ditada e o que a criança escreveu, você deve:
 1. Analisar a relação entre a escrita e a palavra ditada
 2. Identificar padrões (letras por sílaba, correspondência sonora, etc.)
-3. Classificar na hipótese mais adequada
-4. Explicar brevemente o raciocínio
+3. Classificar na hipótese ma4. Justifique pedagogicamente sua classificação. **A justificativa deve ser sucinta, clara e fácil de entender, mesmo para pessoas leigas no assunto.**
 
 Responda SEMPRE no formato JSON:
 {
   "hipotese": "Nome da Hipótese",
-  "justificativa": "Explicação pedagógica da classificação"
+  "justificativa": "Explicação pedagógica sucinta e acessível"
 }
 """
 
@@ -108,15 +107,14 @@ Analise a imagem da escrita da criança e faça o seguinte:
 1. **Transcreva** exatamente o que a criança escreveu na imagem
 2. **Compare** com as palavras ditadas: {palavras_ditadas}
 3. **Classifique** a hipótese de escrita
-4. **Justifique** pedagogicamente sua classificação
+4. **4. Justifique pedagogicamente sua classificação. **A justificativa deve ser sucinta, clara e fácil de entender, mesmo para pessoas leigas no assunto.**
 
 Responda no formato JSON:
 {{
   "transcricao": "O que você leu na imagem",
   "hipotese": "Nome da Hipótese",
-  "justificativa": "Explicação pedagógica detalhada"
-}}
-"""
+  "justificativa": "Explicação pedagógica sucinta e acessível"
+}}"""
         
         # Envia para o Gemini
         response = model.generate_content([prompt, img])
@@ -201,12 +199,12 @@ Analise a seguinte escrita:
 Palavra ditada: {palavra_ditada.upper()}
 Escrita da criança: {escrita_crianca.upper()}
 
-Classifique a hipótese de escrita e justifique.
+Classifique a hipótese de escrita e justifique. **A justificativa deve ser sucinta, clara e fácil de entender, mesmo para pessoas leigas no assunto.**
 
 Responda no formato JSON:
 {{
   "hipotese": "Nome da Hipótese",
-  "justificativa": "Explicação pedagógica"
+  "justificativa": "Explicação pedagógica sucinta e acessível"
 }}
 """
         
@@ -296,10 +294,12 @@ Considerando que:
 - Se há variação, escolha a hipótese que melhor representa o nível de compreensão predominante
 - Em caso de transição, prefira a hipótese mais avançada que aparece consistentemente
 
-Responda no formato JSON com a hipótese geral e justificativa:
+Responda no formato JSON com a hipótese geral e justificativa. **A justificativa deve ser sucinta, clara e fácil de entender, mesmo para pessoas leigas no assunto.**
+
+Responda no formato JSON:
 {{
   "hipotese": "Nome da Hipótese Geral",
-  "justificativa": "Explicação pedagógica da classificação geral"
+  "justificativa": "Explicação pedagógica sucinta e acessível"
 }}
 """
         

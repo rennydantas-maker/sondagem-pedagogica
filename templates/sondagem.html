@@ -380,10 +380,7 @@
             <h2>📝 3. Finalização do Relatório</h2>
             
             <div class="form-grid">
-                <div class="form-group">
-                    <label for="writing-transcription">Transcrição da Escrita (Editável)</label>
-                    <textarea id="writing-transcription" placeholder="Será preenchido automaticamente pela IA"></textarea>
-                </div>
+
                 <div class="form-group">
                     <label for="writing-hypothesis">Hipótese de Escrita (Editável)</label>
                     <select id="writing-hypothesis">
@@ -426,7 +423,7 @@
             <hr style="margin: 20px 0;">
             <p><strong>Análise Pedagógica:</strong></p>
             <p><strong>Hipótese de Escrita:</strong> <span id="report-writing-hypothesis" style="font-weight: bold; color: #667eea; font-size: 1.2rem;"></span></p>
-            <p><strong>Transcrição:</strong> <span id="report-writing-transcription"></span></p>
+            <p><strong>Transcrição (Lida pela IA):</strong> <span id="report-writing-transcription"></span></p>
             <p><strong>Observações do Professor:</strong></p>
             <p style="white-space: pre-wrap; background: #f5f5f5; padding: 10px; border-radius: 5px;" id="report-teacher-notes"></p>
         </div>
@@ -509,14 +506,8 @@
                 document.getElementById('result-box').style.display = 'block';
 
                 // Preenche os campos editáveis
-                document.getElementById('writing-transcription').value = data.transcricao || '';
+                // document.getElementById('writing-transcription').value = data.transcricao || ''; // Removido
                 document.getElementById('writing-hypothesis').value = data.hipotese || '';
-
-                // O campo de transcrição editável agora é a fonte da verdade para a análise final
-                document.getElementById('writing-transcription').addEventListener('change', function() {
-                    // Se o professor corrigir a transcrição, a análise deve ser refeita
-                    reanalyzeWithAI(palavrasDitadas, this.value);
-                });
 
             } catch (error) {
                 document.getElementById('loading').style.display = 'none';
@@ -525,46 +516,7 @@
             }
         }
 
-        // Função para refazer a análise com transcrição corrigida
-        async function reanalyzeWithAI(palavrasDitadas, transcricaoCorrigida) {
-            // Mostra loading
-            document.getElementById('loading').style.display = 'block';
-            
-            const formData = new FormData();
-            formData.append('palavras_ditadas', palavrasDitadas);
-            formData.append('transcricao_previa', transcricaoCorrigida); // Usa o campo de transcrição prévia para a análise corrigida
-            
-            try {
-                const response = await fetch('/analyze', {
-                    method: 'POST',
-                    body: formData
-                });
 
-                const data = await response.json();
-
-                // Esconde loading
-                document.getElementById('loading').style.display = 'none';
-
-                if (data.error) {
-                    // Se der erro na reanálise, avisa
-                    alert('Erro ao refazer a análise: ' + data.error);
-                    return;
-                }
-
-                // Atualiza apenas os resultados da análise
-                document.getElementById('result-transcription').textContent = data.transcricao || 'N/A';
-                document.getElementById('result-hypothesis').textContent = data.hipotese || 'N/A';
-                document.getElementById('result-justification').textContent = data.justificativa || 'N/A';
-                document.getElementById('result-box').style.display = 'block';
-
-                // Atualiza o campo editável de hipótese
-                document.getElementById('writing-hypothesis').value = data.hipotese || '';
-                
-            } catch (error) {
-                document.getElementById('loading').style.display = 'none';
-                alert('Erro ao processar a reanálise: ' + error.message);
-            }
-        }
         
         // Função para gerar relatório
         function generateReport() {
@@ -587,7 +539,7 @@
             // Coleta dados
             const studentDob = document.getElementById('student-dob').value;
             const palavrasDitadas = document.getElementById('palavras-ditadas').value.trim();
-            const writingTranscription = document.getElementById('writing-transcription').value.trim();
+            const writingTranscription = document.getElementById('result-transcription').textContent.trim();
             const teacherNotes = document.getElementById('teacher-notes').value.trim();
             const imageSrc = document.getElementById('image-preview').src;
 
